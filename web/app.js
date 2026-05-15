@@ -1,5 +1,6 @@
 const API_BASE = "";
 const STORAGE_KEY = "chatbot_rag_chats";
+const USER_KEY = "chatbot_rag_user";
 
 const chatForm = document.querySelector("#chatForm");
 const questionInput = document.querySelector("#questionInput");
@@ -22,6 +23,54 @@ const MAX_UPLOAD_MB = 500;
 const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
 const WELCOME_MESSAGE =
   "Hola. Soy tu asistente documental. Sube documentos o indexa la carpeta data/ y luego preguntame sobre el contenido.";
+
+let currentUser = JSON.parse(localStorage.getItem(USER_KEY) || "null");
+
+function initAuth() {
+  if (!currentUser) {
+    showLoginScreen();
+  } else {
+    initializeApp();
+  }
+}
+
+function showLoginScreen() {
+  const loginOverlay = document.createElement("div");
+  loginOverlay.id = "authOverlay";
+  loginOverlay.className = "auth-overlay";
+  loginOverlay.innerHTML = `
+    <div class="auth-card">
+      <div class="brand-mark">AI</div>
+      <h2>Bienvenido de nuevo</h2>
+      <p>Inicia sesión para acceder a tu panel de documentos</p>
+      <div class="auth-options">
+        <button id="googleLogin" class="auth-btn google">
+          <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Continuar con Google
+        </button>
+        <button id="guestLogin" class="auth-btn guest">Entrar como invitado</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(loginOverlay);
+
+  document.querySelector("#googleLogin").onclick = () => handleLogin("Google User", "google");
+  document.querySelector("#guestLogin").onclick = () => handleLogin("Invitado", "guest");
+}
+
+function handleLogin(name, type) {
+  currentUser = { name, type, id: Date.now() };
+  localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+  document.querySelector("#authOverlay").remove();
+  initializeApp();
+}
+
+function initializeApp() {
+  renderChats();
+  renderMessages();
+  checkApi();
+  console.log(`App iniciada para: ${currentUser.name}`);
+}
 
 let chats = loadChats();
 let activeChatId = chats[0].id;
@@ -87,21 +136,23 @@ function renderChats() {
   chats.forEach((chat, index) => {
     const chatContainer = document.createElement("div");
     chatContainer.className = "chat-tab-container";
-    chatContainer.style.display = "flex";
-    chatContainer.style.alignItems = "center";
-    chatContainer.style.gap = "0.25rem";
-    chatContainer.style.width = "100%";
 
     const button = document.createElement("button");
     button.type = "button";
     button.className = `chat-tab${chat.id === activeChatId ? " active" : ""}`;
-    button.style.flex = "1";
-    button.style.justifyContent = "flex-start";
+    
     const title = document.createElement("span");
     title.textContent = chat.title || `Chat ${index + 1}`;
     const count = document.createElement("small");
     count.textContent = String(chat.messages.length);
     button.append(title, count);
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "chat-delete-btn";
+    // Icono de basura (SVG)
+    deleteBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>`;
+    
     button.addEventListener("click", () => {
       activeChatId = chat.id;
       renderChats();
@@ -109,14 +160,6 @@ function renderChats() {
       questionInput.focus();
     });
 
-    const deleteBtn = document.createElement("button");
-    deleteBtn.type = "button";
-    deleteBtn.className = "chat-delete-btn";
-    deleteBtn.textContent = "×";
-    deleteBtn.style.padding = "0.4rem 0.6rem";
-    deleteBtn.style.minWidth = "2rem";
-    deleteBtn.style.fontSize = "1.2rem";
-    deleteBtn.style.borderRadius = "6px";
     deleteBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       if (confirm(`¿Deseas eliminar "${chat.title}"? Esta acción no se puede deshacer.`)) {
@@ -156,18 +199,21 @@ function addMessageElement(role, text, sources = []) {
   bubble.textContent = text;
   message.appendChild(bubble);
 
-  // Las fuentes se procesan en backend pero no se muestran en frontend
-  // if (sources.length) {
-  //   const sourceList = document.createElement("div");
-  //   sourceList.className = "sources";
-  //   sourceList.textContent = sources
-  //     .map((source) => {
-  //       const name = source.source ? source.source.split(/[\\/]/).pop() : "Documento";
-  //       return source.page !== null && source.page !== undefined ? `${name}, pagina ${source.page + 1}` : name;
-  //     })
-  //     .join(" | ");
-  //   message.appendChild(sourceList);
-  // }
+  if (sources && sources.length > 0) {
+    const sourceList = document.createElement("div");
+    sourceList.className = "sources-list";
+    sourceList.style.fontSize = "0.75rem";
+    sourceList.style.marginTop = "0.5rem";
+    sourceList.style.color = "var(--text-tertiary)";
+    
+    const sourceText = sources.map(s => {
+      const pageInfo = s.page !== null ? ` (Pág. ${s.page + 1})` : "";
+      return `📄 ${s.source}${pageInfo}`;
+    }).join(" | ");
+    
+    sourceList.textContent = "Fuentes: " + sourceText;
+    bubble.appendChild(sourceList);
+  }
 
   chatMessages.appendChild(message);
 }
@@ -183,13 +229,17 @@ async function readApiResponse(response) {
     return data;
   }
 
-  await response.text();
+  const errorText = await response.text();
   if (response.status >= 500) {
+    console.error("Error del servidor:", errorText);
+    if (errorText.includes("Timeout") || response.status === 504) {
+      throw new Error("El servidor tardó demasiado. Intenta con un archivo más pequeño o revisa la capacidad de tu hosting.");
+    }
     throw new Error(
-      "El servidor tuvo un problema procesando el documento. Reinicia el servidor e intenta otra vez. Si el PDF es escaneado, primero debe pasar por OCR o convertirse a texto seleccionable."
+      `Error ${response.status}: El servidor tuvo un problema interno. Verifica que el equipo tenga suficiente memoria RAM para cargar los modelos de IA.`
     );
   }
-  throw new Error("No se pudo completar la solicitud. Verifica que el servidor este encendido y vuelve a intentarlo.");
+  throw new Error(`Error ${response.status}: No se pudo completar la solicitud. Verifica la conexión con el servidor.`);
 }
 
 function validateSelectedFiles(files) {
@@ -366,6 +416,4 @@ chatForm.addEventListener("submit", async (event) => {
   }
 });
 
-renderChats();
-renderMessages();
-checkApi();
+initAuth();
