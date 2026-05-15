@@ -19,7 +19,7 @@ const chatList = document.querySelector("#chatList");
 const newChatButton = document.querySelector("#newChatButton");
 const activeChatTitle = document.querySelector("#activeChatTitle");
 
-const MAX_UPLOAD_MB = 500;
+const MAX_UPLOAD_MB = 50;
 const MAX_UPLOAD_BYTES = MAX_UPLOAD_MB * 1024 * 1024;
 const WELCOME_MESSAGE =
   "Hola. Soy tu asistente documental. Sube documentos o indexa la carpeta data/ y luego preguntame sobre el contenido.";

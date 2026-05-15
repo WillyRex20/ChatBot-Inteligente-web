@@ -17,7 +17,7 @@ def validate_document(path: Path) -> None:
 
 
 def _clean_text(text: str) -> str:
-    return " ".join((text or "").replace("\x00", " ").split())
+    return " ".join((text or "").replace("\x00", "").replace("\ufffd", "").split())
 
 
 def _load_pdf_with_pymupdf(path: Path) -> List[Document]:

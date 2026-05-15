@@ -1,4 +1,5 @@
 import logging
+import gc
 import os
 from pathlib import Path
 from uuid import uuid4
@@ -27,7 +28,14 @@ CORS(app)
 # Inicialización de almacenamiento
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 DATA_DIR.mkdir(parents=True, exist_ok=True)
-chatbot = RagChatbot()
+
+# Singleton para el chatbot
+chatbot = None
+def get_chatbot():
+    global chatbot
+    if chatbot is None:
+        chatbot = RagChatbot()
+    return chatbot
 
 
 def allowed_file(filename: str) -> bool:
@@ -82,13 +90,15 @@ def home():
 @app.get("/api/health")
 def health():
     """Endpoint para verificar el estado del sistema."""
-    mode = "openai" if chatbot.llm is not None else "local-rag"
+    bot = get_chatbot()
+    mode = "openai" if bot.llm is not None else "local-rag"
     return json_response("Chatbot RAG activo", 200, mode=mode)
 
 
 @app.post("/api/upload")
 def upload_documents():
     """Carga y procesa nuevos documentos para la base vectorial."""
+    bot = get_chatbot()
     files = request.files.getlist("files")
     if not files:
         return json_response("Sube al menos un archivo PDF, TXT o DOCX.", 400)
@@ -115,14 +125,22 @@ def upload_documents():
     try:
         documents = iter_documents(saved_paths)
         create_vectorstore(documents)
-        chatbot.reload()
+        documents = None # Forzar eliminación de la lista de la memoria
+        bot.reload()
     except Exception as e:
         logger.error(f"Error en procesamiento RAG: {e}")
         return json_response(f"Error al procesar el contenido: {str(e)}", 400)
-
-    # Limpieza básica de memoria después de procesar documentos pesados
-    import gc
-    gc.collect()
+    finally:
+        # Limpieza agresiva de memoria al finalizar cualquier carga
+        gc.collect()
+        if os.name != 'nt': # Solo en Linux (Render) para liberar caché de sistema
+            try:
+                import ctypes
+                libc = ctypes.CDLL("libc.so.6")
+                libc.malloc_trim(0)
+            except:
+                pass
+        gc.collect()
 
     return json_response("Documentos analizados con éxito.", files=[p.name for p in saved_paths])
 
@@ -130,6 +148,7 @@ def upload_documents():
 @app.post("/api/index-sample")
 def index_sample_data():
     """Indexa documentos predeterminados de la carpeta data/."""
+    bot = get_chatbot()
     paths = [path for path in DATA_DIR.iterdir() if path.suffix.lower() in ALLOWED_EXTENSIONS]
     if not paths:
         return json_response("No hay documentos en la carpeta data/.", 404)
@@ -137,7 +156,7 @@ def index_sample_data():
     try:
         documents = load_documents(paths)
         create_vectorstore(documents)
-        chatbot.reload()
+        bot.reload()
     except Exception as exc:
         return json_response(f"Error al indexar carpeta data: {str(exc)}", 500)
 
@@ -147,6 +166,7 @@ def index_sample_data():
 @app.post("/api/chat")
 def chat():
     """Maneja la conversación con el chatbot."""
+    bot = get_chatbot()
     payload = request.get_json(silent=True) or {}
     question = payload.get("question", "")
     session_id = payload.get("session_id", "default")
@@ -155,7 +175,7 @@ def chat():
         return json_response("La pregunta es obligatoria.", 400)
 
     try:
-        result = chatbot.ask(question, session_id=session_id)
+        result = bot.ask(question, session_id=session_id)
         return jsonify(result) # El objeto result ya tiene el formato profesional
     except ValueError as ve:
         return json_response(str(ve), 400)
