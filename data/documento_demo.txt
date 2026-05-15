@@ -1,0 +1,9 @@
+Chatbot Inteligente con Documentos usando LangChain, FAISS y una interfaz web.
+
+Este documento de demostracion explica el funcionamiento general del proyecto. El sistema permite cargar archivos PDF, TXT o DOCX, extraer su contenido textual, dividirlo en fragmentos manejables y convertir esos fragmentos en embeddings semanticos. Los embeddings son representaciones numericas del significado de cada fragmento.
+
+La base vectorial FAISS almacena los embeddings y permite realizar busquedas semanticas. Cuando el usuario escribe una pregunta, LangChain coordina el flujo completo: recibe la consulta, busca los fragmentos mas relevantes en FAISS, entrega ese contexto al modelo de inteligencia artificial y genera una respuesta basada en el contenido recuperado.
+
+La interfaz web se construye con HTML, CSS y JavaScript. El backend se implementa con Flask y expone endpoints para subir documentos, indexar archivos de la carpeta data y responder preguntas. El chatbot mantiene historial de conversacion durante la sesion, por lo que puede funcionar como una experiencia interactiva similar a ChatGPT.
+
+El objetivo academico del proyecto es demostrar recuperacion aumentada por generacion, tambien conocida como RAG. Esta tecnica mejora las respuestas del modelo porque no depende solamente de su entrenamiento previo, sino que consulta documentos especificos proporcionados por el usuario.

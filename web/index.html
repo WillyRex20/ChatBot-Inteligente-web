@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chatbot Inteligente con Documentos</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-mark">AI</span>
+          <div>
+            <h1>Asistente IA</h1>
+            <p>LangChain + FAISS + Web</p>
+          </div>
+        </div>
+
+        <section class="chat-panel" aria-label="Conversaciones">
+          <div class="panel-title">
+            <h2>Chats</h2>
+            <button id="newChatButton" class="small-button" type="button">Nuevo</button>
+          </div>
+          <div id="chatList" class="chat-list"></div>
+        </section>
+
+        <section class="info-panel">
+          <h2>Arquitectura</h2>
+          <ul>
+            <li>Interfaz HTML, CSS y JavaScript</li>
+            <li>API local con Flask</li>
+            <li>Recuperacion semantica con LangChain</li>
+            <li>Embeddings y busqueda vectorial FAISS</li>
+          </ul>
+        </section>
+      </aside>
+
+      <section class="chat-area" aria-label="Chatbot">
+        <header class="chat-header">
+          <div>
+            <p class="eyebrow">Consulta documental inteligente</p>
+            <h2 id="activeChatTitle">Chat principal</h2>
+          </div>
+          <span id="apiStatus" class="api-status">Conectando...</span>
+        </header>
+
+        <div id="chatMessages" class="chat-messages"></div>
+
+        <div class="input-tools">
+          <p id="uploadStatus" class="upload-status">Esperando documentos.</p>
+          <div class="tools-bar">
+            <label class="tool-btn" for="fileInput" title="Subir archivos">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+            </label>
+            <input id="fileInput" type="file" accept=".pdf,.txt,.docx,image/*" multiple />
+
+            <button class="tool-btn" id="screenshotBtn" type="button" title="Captura de pantalla">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
+            </button>
+
+            <button class="tool-btn" id="linkBtn" type="button" title="Compartir enlace">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+              </svg>
+            </button>
+
+            <button class="tool-btn" id="voiceBtn" type="button" title="Grabar audio">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="23"></line>
+                <line x1="8" y1="23" x2="16" y2="23"></line>
+              </svg>
+            </button>
+
+            <button class="tool-btn" id="sampleBtn" type="button" title="Datos de demostración">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                <line x1="15" y1="9" x2="15.01" y2="9"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <form id="chatForm" class="composer">
+          <input
+            id="questionInput"
+            type="text"
+            placeholder="Ejemplo: Cual es la idea principal del documento?"
+            autocomplete="off"
+          />
+          <button type="submit">Enviar</button>
+        </form>
+      </section>
+    </main>
+
+    <div id="alertOverlay" class="alert-overlay" hidden>
+      <section class="alert-dialog" role="alertdialog" aria-modal="true" aria-labelledby="alertTitle">
+        <h2 id="alertTitle">Aviso</h2>
+        <p id="alertMessage"></p>
+        <button id="alertClose" type="button">Entendido</button>
+      </section>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
