@@ -158,7 +158,11 @@ def index_sample_data():
         create_vectorstore(documents)
         bot.reload()
     except Exception as exc:
+        logger.error(f"Error indexando data: {exc}")
         return json_response(f"Error al indexar carpeta data: {str(exc)}", 500)
+    finally:
+        documents = None
+        gc.collect()
 
     return json_response("Documentos de data/ indexados.", files=[p.name for p in paths])
 

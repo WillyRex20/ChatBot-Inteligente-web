@@ -259,6 +259,10 @@ class RagChatbot:
         unique_sources = []
         for doc in source_documents:
             meta = doc.metadata or {}
-            s = {"source": Path(meta.get("source", "doc")).name, "page": meta.get("page")}
+            raw_source = Path(meta.get("source", "doc")).name
+            # Limpiar el prefijo UUID si existe para no mostrar nombres técnicos al usuario
+            clean_source = raw_source[33:] if len(raw_source) > 33 and "_" in raw_source[:34] else raw_source
+            
+            s = {"source": clean_source, "page": meta.get("page")}
             if s not in unique_sources: unique_sources.append(s)
         return unique_sources

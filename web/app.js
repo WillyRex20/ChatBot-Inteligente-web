@@ -65,10 +65,24 @@ function handleLogin(name, type) {
   initializeApp();
 }
 
+function logout() {
+  if (confirm("¿Estás seguro de que deseas cerrar sesión?")) {
+    localStorage.removeItem(USER_KEY);
+    location.reload();
+  }
+}
+
 function initializeApp() {
   renderChats();
   renderMessages();
   checkApi();
+  
+  // Añadir botón de cerrar sesión en la sidebar para mayor profesionalismo
+  if (!document.querySelector("#logoutBtn")) {
+    const brand = document.querySelector(".brand");
+    brand.insertAdjacentHTML("afterend", `<button id="logoutBtn" class="ghost-button small-button" style="margin: 0 0 1rem 0;">Cerrar Sesión</button>`);
+    document.querySelector("#logoutBtn").onclick = logout;
+  }
   console.log(`App iniciada para: ${currentUser.name}`);
 }
 
