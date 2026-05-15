@@ -40,7 +40,7 @@ def create_vectorstore(documents: Iterable[Document], persist_path: Path = VECTO
 
     for chunk in iter_chunks(documents):
         batch.append(chunk)
-        if len(batch) < VECTOR_BATCH_SIZE:
+        if len(batch) < (VECTOR_BATCH_SIZE or 1):
             continue
 
         if vectorstore is None:

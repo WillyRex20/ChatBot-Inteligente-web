@@ -1,4 +1,70 @@
 const API_BASE = "";
+
+// Inyección de estilos para soporte de Modo Oscuro y Responsividad
+const injectStyles = () => {
+  const style = document.createElement('style');
+  style.textContent = `
+    :root {
+      --bg-app: #f4f7f6;
+      --bg-sidebar: #ffffff;
+      --text-main: #333333;
+      --text-secondary: #666666;
+      --border-color: #e0e0e0;
+      --bubble-user: #007bff;
+      --bubble-bot: #ffffff;
+    }
+    [data-theme="dark"] {
+      --bg-app: #121212;
+      --bg-sidebar: #1e1e1e;
+      --text-main: #f0f0f0;
+      --text-secondary: #aaaaaa;
+      --border-color: #333333;
+      --bubble-user: #0056b3;
+      --bubble-bot: #2c2c2c;
+    }
+    body { background-color: var(--bg-app); color: var(--text-main); transition: background 0.3s, color 0.3s; }
+    .sidebar { background-color: var(--bg-sidebar); border-right: 1px solid var(--border-color); }
+    .bubble { background-color: var(--bubble-bot); color: var(--text-main); border: 1px solid var(--border-color); }
+    .message.user .bubble { background-color: var(--bubble-user); color: white; border: none; }
+    
+    /* Ajustes para Móvil y Tablets */
+    @media (max-width: 768px) {
+      .app-container { flex-direction: column; }
+      .sidebar { 
+        width: 100% !important; 
+        height: auto !important; 
+        max-height: 200px; 
+        overflow-y: auto;
+        position: relative;
+      }
+      .brand { padding: 10px; }
+      .chat-area { height: calc(100vh - 200px); }
+      #activeChatTitle { font-size: 1rem; }
+    }
+
+    /* Botón de Modo Oscuro */
+    #themeToggle {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--bubble-user);
+      color: white;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  `;
+  document.head.appendChild(style);
+};
+injectStyles();
+
 const STORAGE_KEY = "chatbot_rag_chats";
 const USER_KEY = "chatbot_rag_user";
 
@@ -32,6 +98,43 @@ function initAuth() {
   } else {
     initializeApp();
   }
+}
+
+function initTheme() {
+  const themeToggle = document.createElement("button");
+  themeToggle.id = "themeToggle";
+  themeToggle.title = "Cambiar modo (Oscuro/Claro)";
+  themeToggle.innerHTML = `
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+    </svg>
+  `;
+  document.body.appendChild(themeToggle);
+
+  const applyTheme = (theme) => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
+  };
+
+  // Detectar preferencia guardada o del sistema
+  const savedTheme = localStorage.getItem("theme");
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
+
+  if (savedTheme) {
+    applyTheme(savedTheme);
+  } else {
+    applyTheme(prefersDark.matches ? "dark" : "light");
+  }
+
+  themeToggle.onclick = () => {
+    const current = document.documentElement.getAttribute("data-theme");
+    applyTheme(current === "dark" ? "light" : "dark");
+  };
+
+  // Escuchar cambios automáticos del sistema
+  prefersDark.addEventListener("change", e => {
+    if (!localStorage.getItem("theme")) applyTheme(e.matches ? "dark" : "light");
+  });
 }
 
 function showLoginScreen() {
@@ -73,9 +176,15 @@ function logout() {
 }
 
 function initializeApp() {
+  // Reducir tamaño de letra de los elementos de la barra lateral
+  if (newChatButton) newChatButton.style.fontSize = "0.85rem";
+  const brand = document.querySelector(".brand");
+  if (brand) brand.style.fontSize = "0.95rem";
+
   renderChats();
   renderMessages();
   checkApi();
+  initTheme();
   
   // Añadir botón de cerrar sesión en la sidebar para mayor profesionalismo
   if (!document.querySelector("#logoutBtn")) {
@@ -154,16 +263,42 @@ function renderChats() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = `chat-tab${chat.id === activeChatId ? " active" : ""}`;
+    // Cuadro más apegado a la letra y compacto
+    button.style.padding = "4px 8px";
+    button.style.minHeight = "auto";
+    button.style.display = "flex";
+    button.style.alignItems = "center";
+    button.style.gap = "6px";
+    button.style.width = "100%";
     
     const title = document.createElement("span");
+    title.style.fontSize = "0.8rem";
+    title.style.flex = "1";
+    title.style.textAlign = "left";
+    title.style.overflow = "hidden";
+    title.style.textOverflow = "ellipsis";
+    title.style.whiteSpace = "nowrap";
     title.textContent = chat.title || `Chat ${index + 1}`;
     const count = document.createElement("small");
+    count.style.fontSize = "0.7rem";
+    count.style.opacity = "0.7";
     count.textContent = String(chat.messages.length);
-    button.append(title, count);
 
     const deleteBtn = document.createElement("button");
     deleteBtn.type = "button";
     deleteBtn.className = "chat-delete-btn";
+    // Cuadro rojo centrado para el icono de basura
+    deleteBtn.style.backgroundColor = "#ff4444";
+    deleteBtn.style.color = "white";
+    deleteBtn.style.width = "24px";
+    deleteBtn.style.height = "24px";
+    deleteBtn.style.borderRadius = "4px";
+    deleteBtn.style.border = "none";
+    deleteBtn.style.display = "flex";
+    deleteBtn.style.alignItems = "center";
+    deleteBtn.style.justifyContent = "center";
+    deleteBtn.style.padding = "0";
+    deleteBtn.style.flexShrink = "0";
     // Icono de basura (SVG)
     deleteBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>`;
     
@@ -173,6 +308,9 @@ function renderChats() {
       renderMessages();
       questionInput.focus();
     });
+
+    deleteBtn.addEventListener("mouseenter", () => deleteBtn.style.backgroundColor = "#cc0000");
+    deleteBtn.addEventListener("mouseleave", () => deleteBtn.style.backgroundColor = "#ff4444");
 
     deleteBtn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -191,7 +329,8 @@ function renderChats() {
       }
     });
 
-    chatContainer.append(button, deleteBtn);
+    button.append(title, count, deleteBtn);
+    chatContainer.appendChild(button);
     chatList.appendChild(chatContainer);
   });
 }
@@ -324,6 +463,7 @@ fileInput.addEventListener("change", async (event) => {
   }
 
   const formData = new FormData();
+  formData.append("session_id", activeChatId);
   [...fileInput.files].forEach((file) => formData.append("files", file));
 
   setStatus(uploadStatus, "Procesando documentos. Si el PDF es grande, puede tardar varios minutos...", "neutral");
@@ -345,7 +485,11 @@ fileInput.addEventListener("change", async (event) => {
 sampleBtn.addEventListener("click", async () => {
   setStatus(uploadStatus, "Indexando documentos de data/...", "neutral");
   try {
-    const response = await fetch(`${API_BASE}/api/index-sample`, { method: "POST" });
+    const response = await fetch(`${API_BASE}/api/index-sample`, { 
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: activeChatId })
+    });
     const data = await readApiResponse(response);
     setStatus(uploadStatus, data.message, "success");
     addMessageToChat("assistant", `Se indexaron: ${data.files.join(", ")}.`);

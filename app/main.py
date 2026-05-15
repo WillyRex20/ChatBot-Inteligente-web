@@ -1,3 +1,4 @@
+from dotenv import load_dotenv
 import logging
 import gc
 import os
@@ -8,6 +9,9 @@ from flask import Flask, jsonify, request, send_from_directory, Response
 from flask_cors import CORS
 from werkzeug.exceptions import HTTPException, RequestEntityTooLarge
 from werkzeug.utils import secure_filename
+
+# Cargar variables de entorno antes de cualquier otra importación del proyecto
+load_dotenv()
 
 from .chatbot import RagChatbot
 from .config import ALLOWED_EXTENSIONS, BASE_DIR, DATA_DIR, MAX_CONTENT_LENGTH, MAX_UPLOAD_MB, UPLOAD_DIR
@@ -46,7 +50,9 @@ def allowed_file(filename: str) -> bool:
 def json_response(message: str, status_code: int = 200, **kwargs) -> Tuple[Response, int]:
     """Estandariza todas las respuestas de la API."""
     success = status_code < 400
-    payload = {"success": success, "message": message, **kwargs}
+    payload = {"success": success, "message": message, "status": status_code, **kwargs}
+    if not success:
+        payload["error"] = message
     return jsonify(payload), status_code
 
 
@@ -78,7 +84,7 @@ def handle_http_error(error):
 def handle_unexpected_error(error):
     logger.error(f"Error inesperado: {error}", exc_info=True)
     if request.path.startswith("/api/"):
-        return json_response("Error interno del servidor. Por favor, contacte a soporte.", 500)
+        return json_response(f"Error interno: {str(error)}", 500)
     return "Error interno", 500
 
 
@@ -91,14 +97,17 @@ def home():
 def health():
     """Endpoint para verificar el estado del sistema."""
     bot = get_chatbot()
-    mode = "openai" if bot.llm is not None else "local-rag"
-    return json_response("Chatbot RAG activo", 200, mode=mode)
+    return json_response("Chatbot RAG activo (Modo Local)", 200, mode="local-rag")
 
 
 @app.post("/api/upload")
 def upload_documents():
     """Carga y procesa nuevos documentos para la base vectorial."""
     bot = get_chatbot()
+    # Obtener session_id del formulario
+    session_id = request.form.get("session_id", "default")
+    safe_session_id = secure_filename(session_id)
+    
     files = request.files.getlist("files")
     if not files:
         return json_response("Sube al menos un archivo PDF, TXT o DOCX.", 400)
@@ -109,11 +118,12 @@ def upload_documents():
             if not file.filename:
                 continue
             if not allowed_file(file.filename):
-                return json_response(f"Formato no permitido: {file.filename}.", 400)
+                return json_response(f"El archivo '{file.filename}' no tiene una extensión permitida (.pdf, .txt, .docx).", 400)
 
             filename = f"{uuid4().hex}_{secure_filename(file.filename)}"
             path = UPLOAD_DIR / filename
             file.save(path)
+            logger.info(f"Archivo guardado en: {path}")
             saved_paths.append(path)
     except Exception as e:
         logger.error(f"Error guardando archivos: {e}")
@@ -124,8 +134,14 @@ def upload_documents():
 
     try:
         documents = iter_documents(saved_paths)
-        create_vectorstore(documents)
-        documents = None # Forzar eliminación de la lista de la memoria
+        doc_list = list(documents)
+        if not doc_list:
+            return json_response("No se pudo extraer texto. Verifica que los documentos no sean imágenes o estén vacíos.", 400)
+
+        # Crear base vectorial específica para esta sesión
+        persist_path = VECTOR_DIR / safe_session_id
+        create_vectorstore(doc_list, persist_path=persist_path)
+        doc_list = None # Forzar eliminación de la lista de la memoria
         bot.reload()
     except Exception as e:
         logger.error(f"Error en procesamiento RAG: {e}")
@@ -140,7 +156,6 @@ def upload_documents():
                 libc.malloc_trim(0)
             except:
                 pass
-        gc.collect()
 
     return json_response("Documentos analizados con éxito.", files=[p.name for p in saved_paths])
 
@@ -149,13 +164,19 @@ def upload_documents():
 def index_sample_data():
     """Indexa documentos predeterminados de la carpeta data/."""
     bot = get_chatbot()
+    payload = request.get_json(silent=True) or {}
+    session_id = payload.get("session_id", "default")
+    safe_session_id = secure_filename(session_id)
+
     paths = [path for path in DATA_DIR.iterdir() if path.suffix.lower() in ALLOWED_EXTENSIONS]
     if not paths:
         return json_response("No hay documentos en la carpeta data/.", 404)
 
     try:
         documents = load_documents(paths)
-        create_vectorstore(documents)
+        # Indexar en la carpeta de la sesión actual
+        persist_path = VECTOR_DIR / safe_session_id
+        create_vectorstore(documents, persist_path=persist_path)
         bot.reload()
     except Exception as exc:
         logger.error(f"Error indexando data: {exc}")
@@ -177,11 +198,13 @@ def chat():
     
     if not question:
         return json_response("La pregunta es obligatoria.", 400)
+    
+    logger.info(f"Procesando pregunta para sesión {session_id}: {question[:50]}...")
 
     try:
         result = bot.ask(question, session_id=session_id)
         return jsonify(result) # El objeto result ya tiene el formato profesional
-    except ValueError as ve:
+    except (ValueError, FileNotFoundError) as ve:
         return json_response(str(ve), 400)
     except Exception as e:
         logger.error(f"Error en flujo de chat: {e}")
