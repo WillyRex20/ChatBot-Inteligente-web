@@ -120,6 +120,10 @@ def upload_documents():
         logger.error(f"Error en procesamiento RAG: {e}")
         return json_response(f"Error al procesar el contenido: {str(e)}", 400)
 
+    # Limpieza básica de memoria después de procesar documentos pesados
+    import gc
+    gc.collect()
+
     return json_response("Documentos analizados con éxito.", files=[p.name for p in saved_paths])
 
 

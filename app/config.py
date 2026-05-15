@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 
@@ -7,7 +8,7 @@ VECTOR_DIR = BASE_DIR / "storage" / "faiss_index"
 UPLOAD_DIR = BASE_DIR / "uploads"
 
 ALLOWED_EXTENSIONS = {".pdf", ".txt", ".docx"}
-MAX_UPLOAD_MB = 500
+MAX_UPLOAD_MB = int(os.environ.get("MAX_UPLOAD_MB", 50))
 MAX_CONTENT_LENGTH = MAX_UPLOAD_MB * 1024 * 1024
 
 CHUNK_SIZE = 650
