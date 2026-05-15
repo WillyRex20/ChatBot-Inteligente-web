@@ -343,19 +343,22 @@ sampleBtn.addEventListener("click", async () => {
 
 screenshotBtn.addEventListener("click", async () => {
   try {
-    if (navigator.screenshot) {
-      const canvas = await navigator.screenshot.captureScreen();
-      const blob = await new Promise((resolve) => canvas.toBlob(resolve));
-      const file = new File([blob], `screenshot-${Date.now()}.png`, { type: "image/png" });
-      const dt = new DataTransfer();
-      dt.items.add(file);
-      fileInput.files = dt.files;
-      fileInput.dispatchEvent(new Event("change", { bubbles: true }));
-    } else {
-      showAlert("Funcionalidad en desarrollo: captura de pantalla disponible próximamente.");
-    }
+    // Usar la API estándar de captura de pantalla (Screen Capture API)
+    const stream = await navigator.mediaDevices.getDisplayMedia({ preferCurrentTab: true });
+    const video = document.createElement('video');
+    video.srcObject = stream;
+    await video.play();
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    
+    stream.getTracks().forEach(track => track.stop());
+    showAlert("Captura realizada con éxito. Ahora puedes subirla si deseas analizar visualmente el contenido.");
   } catch (error) {
-    showAlert("No se pudo capturar la pantalla. Intenta con el botón de subir archivos.");
+    console.error(error);
+    showAlert("No se pudo completar la captura de pantalla o el permiso fue denegado.");
   }
 });
 

@@ -5,8 +5,8 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
 
-from app.config import CHUNK_OVERLAP, CHUNK_SIZE, RETRIEVER_K, VECTOR_BATCH_SIZE, VECTOR_DIR
-from app.embeddings import get_embeddings
+from .config import CHUNK_OVERLAP, CHUNK_SIZE, RETRIEVER_K, VECTOR_BATCH_SIZE, VECTOR_DIR
+from .embeddings import get_embeddings
 
 
 def get_splitter() -> RecursiveCharacterTextSplitter:

@@ -5,7 +5,7 @@ from langchain_community.document_loaders import Docx2txtLoader, TextLoader
 from langchain_core.documents import Document
 from pypdf import PdfReader
 
-from app.config import ALLOWED_EXTENSIONS, MIN_PAGE_TEXT_CHARS
+from .config import ALLOWED_EXTENSIONS, MIN_PAGE_TEXT_CHARS
 
 
 def validate_document(path: Path) -> None:

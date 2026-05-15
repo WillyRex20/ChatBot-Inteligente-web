@@ -8,10 +8,10 @@ from flask_cors import CORS
 from werkzeug.exceptions import HTTPException, RequestEntityTooLarge
 from werkzeug.utils import secure_filename
 
-from app.chatbot import RagChatbot
-from app.config import ALLOWED_EXTENSIONS, BASE_DIR, DATA_DIR, MAX_CONTENT_LENGTH, MAX_UPLOAD_MB, UPLOAD_DIR
-from app.document_loader import iter_documents, load_documents
-from app.vectorstore import create_vectorstore
+from .chatbot import RagChatbot
+from .config import ALLOWED_EXTENSIONS, BASE_DIR, DATA_DIR, MAX_CONTENT_LENGTH, MAX_UPLOAD_MB, UPLOAD_DIR
+from .document_loader import iter_documents, load_documents
+from .vectorstore import create_vectorstore
 
 # Configuración de Logs
 logging.basicConfig(
